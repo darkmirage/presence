@@ -1,7 +1,7 @@
 import React from 'react';
 
 import useTrack from '../hooks/useTrack';
-import Video from './Video';
+import TwilioVideo from './TwilioVideo';
 
 import { LocalTrackPublication, RemoteTrackPublication } from 'twilio-video';
 
@@ -19,7 +19,7 @@ const Publication = ({ publication, local }: Props) => {
 
   switch (track.kind) {
     case 'video':
-      return <Video track={track} local={local} />;
+      return <TwilioVideo track={track} local={local} />;
     default:
       return null;
   }

@@ -3,6 +3,7 @@ import { Classes, Button, InputGroup } from '@blueprintjs/core';
 import { createUseStyles } from 'react-jss';
 
 import VideoChat from './components/VideoChat';
+import WebcamVideo from './components/WebcamVideo';
 
 const App = () => {
   document.body.className = Classes.DARK;
@@ -11,6 +12,7 @@ const App = () => {
     localStorage.getItem('presence.username') || ''
   );
   const [started, setStarted] = React.useState(false);
+  const [showPreview, setShowPreview] = React.useState(true);
 
   const handleChange = (event: React.ChangeEvent<any>) => {
     const { value } = event.target;
@@ -28,6 +30,7 @@ const App = () => {
         <VideoChat username={username} roomName="main" />
       ) : (
         <>
+          {showPreview ? <WebcamVideo /> : null}
           <InputGroup
             placeholder="User name"
             type="text"
@@ -35,6 +38,7 @@ const App = () => {
             onChange={handleChange}
           />
           <Button onClick={handleStart}>Start</Button>
+          <Button onClick={() => setShowPreview(!showPreview)}>Preview</Button>
         </>
       )}
     </div>
@@ -45,6 +49,7 @@ const useStyles = createUseStyles({
   App: {
     alignItems: 'center',
     display: 'flex',
+    flexDirection: 'column',
     height: '100%',
     justifyContent: 'center',
   },

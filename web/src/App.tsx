@@ -1,15 +1,45 @@
 import React from 'react';
-import { Classes } from '@blueprintjs/core';
+import { Classes, Button, InputGroup } from '@blueprintjs/core';
 import { createUseStyles } from 'react-jss';
 
-import { randomId } from './random';
 import VideoChat from './components/VideoChat';
 
 const App = () => {
   document.body.className = Classes.DARK;
   const classes = useStyles();
-  return <div className={classes.App}><VideoChat username={randomId()} roomName="main" /></div>;
-}
+  const [username, setUsername] = React.useState(
+    localStorage.getItem('presence.username') || ''
+  );
+  const [started, setStarted] = React.useState(false);
+
+  const handleChange = (event: React.ChangeEvent<any>) => {
+    const { value } = event.target;
+    setUsername(value);
+  };
+
+  const handleStart = () => {
+    localStorage.setItem('presence.username', username);
+    setStarted(true);
+  };
+
+  return (
+    <div className={classes.App}>
+      {started ? (
+        <VideoChat username={username} roomName="main" />
+      ) : (
+        <>
+          <InputGroup
+            placeholder="User name"
+            type="text"
+            value={username}
+            onChange={handleChange}
+          />
+          <Button onClick={handleStart}>Start</Button>
+        </>
+      )}
+    </div>
+  );
+};
 
 const useStyles = createUseStyles({
   App: {
@@ -17,7 +47,7 @@ const useStyles = createUseStyles({
     display: 'flex',
     height: '100%',
     justifyContent: 'center',
-  }
-})
+  },
+});
 
 export default App;

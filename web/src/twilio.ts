@@ -1,4 +1,4 @@
-import { connect, Room, RemoteParticipant } from 'twilio-video';
+import { connect } from 'twilio-video';
 import axios from 'axios';
 
 const TOKEN_URL =
@@ -15,4 +15,4 @@ async function connectRoom(username: string, roomName: string) {
   return room;
 }
 
-export { connectRoom, Room, RemoteParticipant };
+export { connectRoom };

@@ -1,46 +1,41 @@
 import React from 'react';
 import { Spinner } from '@blueprintjs/core';
 import { createUseStyles } from 'react-jss';
+import { Room as TwilioRoom } from 'twilio-video';
 
-import { getPoseNet } from '../posenet';
-import { connectRoom, Room, RemoteParticipant } from '../twilio';
+import { connectRoom } from '../twilio';
+import Room from './Room';
 
 type Props = {
-  roomName: string,
-  username: string,
-}
+  roomName: string;
+  username: string;
+};
 
 const VideoChat = (props: Props) => {
   const classes = useStyles();
-  const [room, setRoom] = React.useState<Room>();
-  const [participants, setParticipants] = React.useState<RemoteParticipant[]>([]);
+  const [room, setRoom] = React.useState<TwilioRoom>();
 
   React.useEffect(() => {
     connectRoom(props.username, props.roomName).then((r) => {
-      const p = Array.from(r.participants.values());
       setRoom(r);
     });
+  }, [props.roomName, props.username]);
 
+  React.useEffect(() => {
     return () => {
       if (room) {
         room.disconnect();
       }
     };
-  }, [props.roomName, props.username]);
+  }, [room]);
 
-  const content = room ? null : <Spinner />;
+  const content = room ? <Room room={room} /> : <Spinner />;
 
-  return (
-    <div className={classes.VideoChat}>
-      {content}
-    </div>
-  );
-}
+  return <div className={classes.VideoChat}>{content}</div>;
+};
 
 const useStyles = createUseStyles({
-  VideoChat: {
-
-  }
-})
+  VideoChat: {},
+});
 
 export default VideoChat;

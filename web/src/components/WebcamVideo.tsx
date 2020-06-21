@@ -2,6 +2,7 @@ import React from 'react';
 import { createUseStyles } from 'react-jss';
 
 import Video from './Video';
+import PoseEstimator from './PoseEstimator';
 
 type Props = {};
 
@@ -16,11 +17,16 @@ const WebcamVideo = (props: Props) => {
       .getUserMedia({
         video: {
           facingMode: 'user',
+          width: 1920,
+          height: 1920,
         },
       })
       .then((s) => {
         stream = s;
         ref.current.srcObject = stream;
+        const { height, width } = s.getVideoTracks()[0].getSettings();
+        ref.current.height = height!;
+        ref.current.width = width!;
       });
 
     return () => {
@@ -28,11 +34,12 @@ const WebcamVideo = (props: Props) => {
         stream.getTracks().forEach((track) => track.stop());
       }
     };
-  }, [ref.current]);
+  }, []);
 
   return (
     <div className={classes.WebcamVideo}>
       <Video ref={ref} />
+      <PoseEstimator videoRef={ref} />
     </div>
   );
 };

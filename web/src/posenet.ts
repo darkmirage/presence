@@ -7,6 +7,7 @@ load({
   outputStride: 16,
   inputResolution: 200,
   multiplier: 0.5,
+  quantBytes: 2,
 }).then((n) => {
   net = n;
 });

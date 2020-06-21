@@ -23,4 +23,4 @@ async function getPoseNet(): Promise<PoseNet> {
   });
 }
 
-export { getPoseNet };
+export default getPoseNet;

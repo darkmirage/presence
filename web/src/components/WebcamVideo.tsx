@@ -18,7 +18,6 @@ const WebcamVideo = (props: Props) => {
         video: {
           facingMode: 'user',
           width: 1920,
-          height: 1920,
         },
       })
       .then((s) => {
@@ -27,6 +26,7 @@ const WebcamVideo = (props: Props) => {
         const { height, width } = s.getVideoTracks()[0].getSettings();
         ref.current.height = height!;
         ref.current.width = width!;
+        console.log('Webcam dimensions', width, height);
       });
 
     return () => {

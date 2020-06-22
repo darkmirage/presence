@@ -1,10 +1,23 @@
 import React from 'react';
 import { createUseStyles } from 'react-jss';
+import classNames from 'classnames';
 
-const Video = React.forwardRef<HTMLVideoElement>((props, ref) => {
-  const classes = useStyles();
-  return <video className={classes.Video} ref={ref} muted autoPlay />;
-});
+type Props = React.ComponentPropsWithoutRef<'video'>;
+
+const Video = React.forwardRef<HTMLVideoElement, Props>(
+  ({ className, ...rest }, ref) => {
+    const classes = useStyles();
+    return (
+      <video
+        className={classNames(classes.Video, className)}
+        ref={ref}
+        muted
+        autoPlay
+        {...rest}
+      />
+    );
+  }
+);
 
 const useStyles = createUseStyles({
   Video: {

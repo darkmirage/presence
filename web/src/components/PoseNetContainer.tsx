@@ -13,6 +13,7 @@ type Props = {
   videoRef: React.RefObject<HTMLVideoElement>;
   flipped?: boolean;
   useKalmanFilter?: boolean;
+  useP3P?: boolean;
   children?: (
     pose: Pose,
     estimator: Estimator,
@@ -45,10 +46,16 @@ const filterPose = (() => {
 })();
 
 const PoseNetContainer = (props: Props) => {
-  const { videoRef, children, flipped = false, useKalmanFilter = true } = props;
+  const {
+    videoRef,
+    children,
+    flipped = false,
+    useKalmanFilter = true,
+    useP3P = true,
+  } = props;
   const [net, setNet] = React.useState<PoseNet | null>(null);
   const [pose, setPose] = React.useState<Pose | null>(null);
-  const [estimator] = React.useState(() => new Estimator());
+  const [estimator] = React.useState(() => new Estimator(useP3P));
 
   React.useEffect(() => {
     document.body.appendChild(stats.dom);

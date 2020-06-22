@@ -1,5 +1,5 @@
 import { Pose, Keypoint } from '@tensorflow-models/posenet';
-import { Vector3, PerspectiveCamera, Matrix4 } from 'three';
+import { Vector2, Vector3, PerspectiveCamera, Matrix4 } from 'three';
 
 import solveP3P from './solveP3P';
 import KalmanFilter from './KalmanFilter';
@@ -21,9 +21,15 @@ class PoseEstimator {
   camera: PerspectiveCamera;
   position: Vector3;
   orientation: Matrix4;
+  nose: Vector2;
+  midpoint: Vector2;
   _filters: Record<string, KalmanFilter>;
+  _useP3P: boolean;
 
-  constructor() {
+  constructor(useP3P: boolean = true) {
+    this._useP3P = useP3P;
+    this.nose = new Vector2();
+    this.midpoint = new Vector2();
     this.imageHeight = 1024;
     this.imageWidth = 768;
     this.camera = new PerspectiveCamera(
@@ -53,15 +59,7 @@ class PoseEstimator {
     this.camera.aspect = width / height;
   }
 
-  update(pose: Pose) {
-    const parts: Record<string, Keypoint> = {};
-    for (const k of pose.keypoints) {
-      parts[k.part] = k;
-    }
-
-    const nose = parts['nose'];
-    const leftEye = parts['leftEye'];
-    const rightEye = parts['rightEye'];
+  updateP3P(nose: Keypoint, leftEye: Keypoint, rightEye: Keypoint) {
     _left.set(leftEye.position.x, leftEye.position.y, 0.5);
     _right.set(rightEye.position.x, rightEye.position.y, 0.5);
     _nose.set(nose.position.x, nose.position.y, 0.5);
@@ -122,6 +120,39 @@ class PoseEstimator {
       0,
       1
     );
+  }
+
+  updateTriangleMethod(nose: Keypoint, leftEye: Keypoint, rightEye: Keypoint) {}
+
+  update(pose: Pose) {
+    const parts: Record<string, Keypoint> = {};
+    for (const k of pose.keypoints) {
+      parts[k.part] = k;
+    }
+
+    const nose = parts['nose'];
+    const leftEye = parts['leftEye'];
+    const rightEye = parts['rightEye'];
+
+    if (nose.score >= 0.5) {
+      this.nose.set(
+        (nose.position.x / this.imageWidth) * 2 - 1,
+        (nose.position.y / this.imageHeight) * 2 - 1
+      );
+    }
+
+    if (leftEye.score >= 0.5 && rightEye.score >= 0.5) {
+      this.midpoint.set(
+        (leftEye.position.x + rightEye.position.x) / this.imageWidth - 1,
+        (leftEye.position.y + rightEye.position.y) / this.imageHeight - 1
+      );
+    }
+
+    if (this._useP3P) {
+      this.updateP3P(nose, leftEye, rightEye);
+    } else {
+      this.updateTriangleMethod(nose, leftEye, rightEye);
+    }
   }
 }
 

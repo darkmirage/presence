@@ -1,5 +1,5 @@
 import React from 'react';
-import { Classes, Button, InputGroup } from '@blueprintjs/core';
+import { Classes, Button, InputGroup, Tab, Tabs } from '@blueprintjs/core';
 import { createUseStyles } from 'react-jss';
 
 import VideoChat from './components/VideoChat';
@@ -12,7 +12,7 @@ const App = () => {
     localStorage.getItem('presence.username') || ''
   );
   const [started, setStarted] = React.useState(false);
-  const [showPreview, setShowPreview] = React.useState(true);
+  const [showPoseNet, setShowPoseNet] = React.useState(false);
 
   const handleChange = (event: React.ChangeEvent<any>) => {
     const { value } = event.target;
@@ -24,23 +24,35 @@ const App = () => {
     setStarted(true);
   };
 
+  const twilioPanel = started ? (
+    <VideoChat username={username} roomName="main" />
+  ) : (
+    <>
+      <InputGroup
+        placeholder="User name"
+        type="text"
+        value={username}
+        onChange={handleChange}
+      />
+      <Button onClick={handleStart}>Start</Button>
+    </>
+  );
+
+  const poseNetPanel = (
+    <>
+      <Button onClick={() => setShowPoseNet(!showPoseNet)}>
+        {showPoseNet ? 'Stop PoseNet' : 'Start PoseNet'}
+      </Button>
+      {showPoseNet ? <WebcamVideo /> : null}
+    </>
+  );
+
   return (
     <div className={classes.App}>
-      {started ? (
-        <VideoChat username={username} roomName="main" />
-      ) : (
-        <>
-          {showPreview ? <WebcamVideo /> : null}
-          <InputGroup
-            placeholder="User name"
-            type="text"
-            value={username}
-            onChange={handleChange}
-          />
-          <Button onClick={handleStart}>Start</Button>
-          <Button onClick={() => setShowPreview(!showPreview)}>Preview</Button>
-        </>
-      )}
+      <Tabs defaultSelectedTabId="posenet">
+        <Tab id="twilio" title="Twilio" panel={twilioPanel} />
+        <Tab id="posenet" title="PoseNet" panel={poseNetPanel} />
+      </Tabs>
     </div>
   );
 };

@@ -38,7 +38,9 @@ const WebcamVideo = (props: Props) => {
 
   return (
     <div className={classes.WebcamVideo}>
-      <Video ref={ref} />
+      <div className={classes.WebcamVideo_video}>
+        <Video ref={ref} />
+      </div>
       <PoseEstimator videoRef={ref} />
     </div>
   );
@@ -46,6 +48,11 @@ const WebcamVideo = (props: Props) => {
 
 const useStyles = createUseStyles({
   WebcamVideo: {
+    display: 'flex',
+    position: 'relative',
+  },
+  WebcamVideo_video: {
+    display: 'flex',
     width: 400,
     height: 400,
   },

@@ -5,7 +5,7 @@ let net: PoseNet | null = null;
 load({
   architecture: 'MobileNetV1',
   outputStride: 16,
-  inputResolution: 200,
+  inputResolution: 500,
   multiplier: 0.5,
   quantBytes: 2,
 }).then((n) => {

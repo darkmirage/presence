@@ -1,5 +1,5 @@
 import React from 'react';
-import { PoseNet, Pose } from '@tensorflow-models/posenet';
+import { PoseNet, Pose, Keypoint } from '@tensorflow-models/posenet';
 import { createUseStyles } from 'react-jss';
 import {
   WebGLRenderer,
@@ -36,10 +36,41 @@ function createCube(scene: Scene): Mesh {
   return cube;
 }
 
+export function drawPoint(
+  ctx: CanvasRenderingContext2D,
+  y: number,
+  x: number,
+  r: number
+) {
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, 2 * Math.PI);
+  ctx.fillStyle = 'aqua';
+  ctx.fill();
+}
+
+function drawKeypoints(
+  keypoints: Keypoint[],
+  minConfidence: number,
+  ctx: CanvasRenderingContext2D,
+  scale: number = 1
+) {
+  for (let i = 0; i < keypoints.length; i++) {
+    const keypoint = keypoints[i];
+
+    if (keypoint.score < minConfidence) {
+      continue;
+    }
+
+    const { y, x } = keypoint.position;
+    drawPoint(ctx, y * scale, x * scale, 10);
+  }
+}
+
 const PoseEstimator = (props: Props) => {
   const { videoRef } = props;
   const classes = useStyles();
   const ref = React.useRef<HTMLDivElement>(null);
+  const canvasRef = React.useRef<HTMLCanvasElement>(null);
   const [net, setNet] = React.useState<PoseNet | null>(null);
   const [pose, setPose] = React.useState<Pose | null>(null);
   const [estimator] = React.useState(() => new Estimator());
@@ -72,6 +103,7 @@ const PoseEstimator = (props: Props) => {
     return s;
   });
   const [cube] = React.useState<Mesh>(() => createCube(scene));
+  const [ctx, setCtx] = React.useState<CanvasRenderingContext2D | null>(null);
 
   React.useEffect(() => {
     document.body.appendChild(stats.dom);
@@ -82,50 +114,57 @@ const PoseEstimator = (props: Props) => {
   }, []);
 
   React.useEffect(() => {
-    if (ref.current) {
+    if (ref.current && ref.current.children.length === 0) {
       camera.position.set(-2, 1, 2);
       camera.lookAt(0, 0, 0);
       ref.current.appendChild(renderer.domElement);
       renderer.setSize(ref.current.clientWidth, ref.current.clientHeight);
     }
-  }, [ref.current, renderer, camera]);
+
+    if (videoRef.current && canvasRef.current) {
+      canvasRef.current.width = videoRef.current.width;
+      canvasRef.current.height = videoRef.current.height;
+    }
+
+    if (!ctx && canvasRef.current) {
+      const c = canvasRef.current.getContext('2d');
+      setCtx(c);
+    }
+  }, [pose, camera, ctx, renderer, videoRef]);
+
+  React.useEffect(() => {
+    const video = videoRef.current!;
+
+    const listener = () => {
+      estimator.setResolution(video);
+    };
+
+    video.addEventListener('loadedmetadata', listener);
+
+    return () => {
+      video.removeEventListener('loadedmetadata', listener);
+    };
+  }, [estimator, videoRef]);
 
   React.useEffect(() => {
     let running = true;
-    let video = videoRef.current;
-
-    const listener = () => {
-      estimator.setResolution(videoRef.current!);
-    };
-
-    video?.addEventListener('loadedmetadata', listener);
+    if (!net) {
+      return;
+    }
 
     const updatePose = async () => {
-      if (!running) {
-        return;
-      }
-      video = videoRef.current;
-      stats.begin();
-      if (
-        net &&
-        video &&
-        video.readyState === HTMLMediaElement.HAVE_ENOUGH_DATA
-      ) {
+      const video = videoRef.current;
+      if (video && video.readyState === HTMLMediaElement.HAVE_ENOUGH_DATA) {
+        stats.begin();
         const p = await net.estimateSinglePose(video, {
-          flipHorizontal: true,
+          flipHorizontal: false,
         });
         if (!running) {
           return;
         }
-        estimator.update(p);
-        cube.position.copy(estimator.position);
-        cube.rotation.setFromRotationMatrix(estimator.orientation);
         setPose(p);
+        stats.end();
       }
-
-      renderer.render(scene, camera);
-
-      stats.end();
       requestAnimationFrame(updatePose);
     };
 
@@ -133,51 +172,107 @@ const PoseEstimator = (props: Props) => {
 
     return () => {
       running = false;
-      video?.removeEventListener('loadedmetadata', listener);
     };
-  }, [net, videoRef, estimator]);
+  }, [net, videoRef]);
+
+  React.useEffect(() => {
+    if (!pose) {
+      return;
+    }
+
+    estimator.update(pose);
+    cube.position.copy(estimator.position);
+    cube.rotation.setFromRotationMatrix(estimator.orientation);
+
+    const canvas = canvasRef.current;
+    if (ctx && canvas) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawKeypoints(pose.keypoints, 0.5, ctx);
+    }
+
+    renderer.render(scene, camera);
+  }, [estimator, camera, cube, renderer, scene, ctx, pose]);
 
   if (!pose) {
     return null;
   }
 
-  const confidentPoints = pose.keypoints.filter((k) => k.score >= 0.5);
-
   return (
-    <div className={classes.PoseEstimator}>
-      {pose.score}
-      <div className={classes.PoseEstimator_canvas} ref={ref} />
-      <table>
+    <>
+      <div className={classes.PoseEstimator_canvasContainer}>
+        <canvas
+          ref={canvasRef}
+          className={classes.PoseEstimator_canvas}
+          width={1000}
+          height={1000}
+        />
+      </div>
+      <div className={classes.PoseEstimator_3d} ref={ref} />
+      <table className={classes.PoseEstimator_table}>
         <thead></thead>
         <tbody>
-          {confidentPoints.map((k) => {
+          <tr>
+            <td>Score</td>
+            <td>{pose.score.toPrecision(4)}</td>
+          </tr>
+          <tr>
+            <td>Position</td>
+            <td>{estimator.position.x.toPrecision(4)}</td>
+            <td>{estimator.position.y.toPrecision(4)}</td>
+            <td>{estimator.position.z.toPrecision(4)}</td>
+          </tr>
+          {pose.keypoints.map((k) => {
             return (
-              <tr key={k.part}>
+              <tr
+                key={k.part}
+                className={
+                  k.score > 0.5
+                    ? classes.PoseEstimator_active
+                    : classes.PoseEstimator_inactive
+                }
+              >
                 <td>{k.part}</td>
                 <td>{k.score.toPrecision(2)}</td>
-                <td>
-                  {Math.floor(k.position.x)}, {Math.floor(k.position.y)}
-                </td>
+                <td>{Math.floor(k.position.x)}</td>
+                <td>{Math.floor(k.position.y)}</td>
               </tr>
             );
           })}
         </tbody>
       </table>
-    </div>
+    </>
   );
 };
 
 const useStyles = createUseStyles({
-  PoseEstimator: {
+  PoseEstimator_canvasContainer: {
     position: 'absolute',
-    right: 0,
+    left: 0,
     top: 0,
-    bottom: 0,
-    overflow: 'hidden',
-  },
-  PoseEstimator_canvas: {
     width: 400,
     height: 400,
+  },
+  PoseEstimator_canvas: {
+    objectFit: 'cover',
+    maxWidth: '100%',
+    height: '100%',
+  },
+  PoseEstimator_3d: {
+    width: 400,
+    height: 400,
+  },
+  PoseEstimator_table: {
+    padding: 8,
+    fontSize: 10,
+    maxHeight: 400,
+    overflowY: 'scroll',
+    '& td': {
+      minWidth: 80,
+    },
+  },
+  PoseEstimator_active: {},
+  PoseEstimator_inactive: {
+    opacity: 0.5,
   },
 });
 

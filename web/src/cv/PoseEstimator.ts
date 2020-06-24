@@ -4,15 +4,17 @@ import { Vector2, Vector3, PerspectiveCamera, Matrix4 } from 'three';
 import solveP3P from './solveP3P';
 import KalmanFilter from './KalmanFilter';
 
-const MEAN_IPD = 0.063;
+const IPD_M = 0.063;
+const SHOULDERS_M = 0.3;
+const REF_Z = 0.5;
 
 const _left = new Vector3();
 const _right = new Vector3();
 const _nose = new Vector3();
 const _v = new Vector3();
 
-const _leftWorld = new Vector3(-MEAN_IPD / 2, 0.03175, -0.0254);
-const _rightWorld = new Vector3(MEAN_IPD / 2, 0.03175, -0.0254);
+const _leftWorld = new Vector3(-IPD_M / 2, 0.03175, -0.0254);
+const _rightWorld = new Vector3(IPD_M / 2, 0.03175, -0.0254);
 const _noseWorld = new Vector3(0, 0, 0);
 
 class PoseEstimator {
@@ -25,6 +27,11 @@ class PoseEstimator {
   midpoint: Vector2;
   _filters: Record<string, KalmanFilter>;
   _useP3P: boolean;
+  _calibrated: boolean;
+
+  _f: number;
+  _refIPD: number;
+  _zM: number;
 
   constructor(useP3P: boolean = true) {
     this._useP3P = useP3P;
@@ -44,7 +51,12 @@ class PoseEstimator {
       x: new KalmanFilter(),
       y: new KalmanFilter(),
       z: new KalmanFilter(),
+      zM: new KalmanFilter(),
     };
+    this._calibrated = false;
+    this._f = 0;
+    this._refIPD = 0;
+    this._zM = 0;
   }
 
   _normalizePixels(p: Vector3): Vector3 {
@@ -122,7 +134,57 @@ class PoseEstimator {
     );
   }
 
-  updateTriangleMethod(nose: Keypoint, leftEye: Keypoint, rightEye: Keypoint) {}
+  updateSimplifiedTriangle = (() => {
+    const v = new Vector2();
+    const mid = new Vector2();
+    return (
+      nose: Keypoint,
+      leftEye: Keypoint,
+      rightEye: Keypoint,
+      leftShoulder: Keypoint,
+      rightShoulder: Keypoint
+    ) => {
+      mid.set(
+        (leftEye.position.x + rightEye.position.x) / 2,
+        (leftEye.position.y + rightEye.position.y) / 2
+      );
+      const leftPx = v
+        .set(leftEye.position.x, leftEye.position.y)
+        .sub(mid)
+        .length();
+      const rightPx = v
+        .set(rightEye.position.x, rightEye.position.y)
+        .sub(mid)
+        .length();
+      const verticalPx = v
+        .set(nose.position.x, nose.position.y)
+        .sub(mid)
+        .length();
+      const ipdPx = leftPx + rightPx;
+      const verticalM = (verticalPx / ipdPx) * IPD_M;
+
+      if (!this._calibrated) {
+        this._f = (REF_Z * ipdPx) / IPD_M;
+        this._calibrated = true;
+      }
+
+      let zM = (this._f * IPD_M) / ipdPx;
+
+      if (leftShoulder.score >= 0.5 && rightShoulder.score >= 0.5) {
+        const shouldersM = v
+          .set(
+            leftShoulder.position.x - rightShoulder.position.x,
+            leftShoulder.position.y - rightShoulder.position.y
+          )
+          .length();
+        const sZM = (this._f * SHOULDERS_M) / shouldersM;
+        const ratio = Math.min(1, this._zM / 2);
+        zM = (1 - ratio) * zM + ratio * sZM;
+      }
+
+      this._zM = this._filters.zM.filter(zM);
+    };
+  })();
 
   update(pose: Pose) {
     const parts: Record<string, Keypoint> = {};
@@ -133,6 +195,8 @@ class PoseEstimator {
     const nose = parts['nose'];
     const leftEye = parts['leftEye'];
     const rightEye = parts['rightEye'];
+    const leftShoulder = parts['leftShoulder'];
+    const rightShoulder = parts['rightShoulder'];
 
     if (nose.score >= 0.5) {
       this.nose.set(
@@ -141,17 +205,25 @@ class PoseEstimator {
       );
     }
 
-    if (leftEye.score >= 0.5 && rightEye.score >= 0.5) {
-      this.midpoint.set(
-        (leftEye.position.x + rightEye.position.x) / this.imageWidth - 1,
-        (leftEye.position.y + rightEye.position.y) / this.imageHeight - 1
-      );
+    if (leftEye.score < 0.5 || rightEye.score < 0.5) {
+      return;
     }
+
+    this.midpoint.set(
+      (leftEye.position.x + rightEye.position.x) / this.imageWidth - 1,
+      (leftEye.position.y + rightEye.position.y) / this.imageHeight - 1
+    );
 
     if (this._useP3P) {
       this.updateP3P(nose, leftEye, rightEye);
     } else {
-      this.updateTriangleMethod(nose, leftEye, rightEye);
+      this.updateSimplifiedTriangle(
+        nose,
+        leftEye,
+        rightEye,
+        leftShoulder,
+        rightShoulder
+      );
     }
   }
 }

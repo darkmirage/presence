@@ -5,6 +5,7 @@ import { Button, ButtonGroup } from '@blueprintjs/core';
 import WebcamVideo from '../components/WebcamVideo';
 import PoseNetContainer from '../components/PoseNetContainer';
 import ParallaxScene from '../components/ParallaxScene';
+import PoseOverlay from '../components/PoseOverlay';
 
 const ParallaxDemo = () => {
   const classes = useStyles();
@@ -19,7 +20,7 @@ const ParallaxDemo = () => {
         </Button>
       </ButtonGroup>
       {startPoseNet ? (
-        <WebcamVideo hidden>
+        <WebcamVideo>
           {(ref, flipped) => (
             <PoseNetContainer
               videoRef={ref}
@@ -29,6 +30,7 @@ const ParallaxDemo = () => {
             >
               {(pose, estimator) => (
                 <>
+                  <PoseOverlay videoRef={ref} pose={pose} />
                   <ParallaxScene pose={pose} estimator={estimator} />
                 </>
               )}

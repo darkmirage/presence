@@ -162,6 +162,9 @@ const ParallaxScene = (props: Props) => {
 
   const sliders = showSlider ? (
     <>
+      <div style={{ fontSize: 100, marginRight: 12 }}>
+        {estimator._zM.toFixed(2)}
+      </div>
       <div>
         {xCoeff.toFixed(2)}
         <Slider

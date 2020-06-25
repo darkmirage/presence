@@ -5,6 +5,7 @@ import { createUseStyles } from 'react-jss';
 import Twilio from './pages/Twilio';
 import P3P from './pages/P3P';
 import ParallaxDemo from './pages/ParallaxDemo';
+import RTC from './pages/RTC';
 
 const App = () => {
   document.body.className = Classes.DARK;
@@ -13,10 +14,11 @@ const App = () => {
   return (
     <div className={classes.App}>
       <div className={classes.App_content}>
-        <Tabs defaultSelectedTabId="parallax" renderActiveTabPanelOnly>
+        <Tabs defaultSelectedTabId="rtc" renderActiveTabPanelOnly>
           <Tab id="twilio" title="Twilio" panel={<Twilio />} disabled />
           <Tab id="p3p" title="P3P" panel={<P3P />} />
           <Tab id="parallax" title="Parallax" panel={<ParallaxDemo />} />
+          <Tab id="rtc" title="RTC" panel={<RTC />} />
         </Tabs>
       </div>
     </div>

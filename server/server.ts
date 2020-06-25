@@ -24,8 +24,6 @@ admin.initializeApp({
 
 const serverLogger = logger.child({ module: 'server' });
 
-const UPDATE_FPS = 3;
-
 const ENVIRONMENT = process.env.ENV || 'dev';
 const SOCKETCLUSTER_PORT =
   (process.env.SOCKETCLUSTER_PORT
@@ -112,50 +110,41 @@ expressApp.get('/health-check', (req, res) => {
   }
 })();
 
+const descriptions: Record<string, RTCSessionDescriptionInit> = {};
+
 // SocketCluster/WebSocket connection handling loop.
 (async () => {
-  let intervalId: NodeJS.Timeout | undefined = undefined;
-
   for await (let { socket } of agServer.listener('connection')) {
     serverLogger.info({ event: 'connection', socket: socket.id });
 
     (async () => {
-      for await (let request of socket.procedure('connect')) {
+      for await (let request of socket.procedure('signal')) {
         try {
-          const { assetId, roomId } = request.data;
+          const { channelId, offer } = request.data;
+
+          const existingOffer = descriptions[channelId];
 
           serverLogger.info({
-            event: 'spawn',
-            roomId,
+            event: 'signal',
             socket: socket.id,
-            assetId,
+            channelId,
+            offer,
+            existingOffer,
           });
 
-          request.end(true);
-        } catch (error) {
-          serverLogger.error({ error });
-        }
-      }
-    })();
-
-    (async () => {
-      for await (let { actorId, roomId, update } of socket.receiver('move')) {
-        try {
-          if (!socket.authToken) {
-            throw new Error('Missing auth token');
+          if (existingOffer) {
+            delete descriptions[channelId];
+            request.end({ offer: existingOffer });
+          } else {
+            descriptions[channelId] = offer;
+            request.end(null);
           }
-          const { uid } = socket.authToken;
         } catch (error) {
           serverLogger.error({ error });
         }
       }
     })();
   }
-
-  if (intervalId) {
-    clearInterval(intervalId);
-  }
-  serverLogger.info('Main loop terminated');
 })();
 
 (async () => {

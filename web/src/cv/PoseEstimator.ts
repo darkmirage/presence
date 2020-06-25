@@ -156,12 +156,7 @@ class PoseEstimator {
         .set(rightEye.position.x, rightEye.position.y)
         .sub(mid)
         .length();
-      const verticalPx = v
-        .set(nose.position.x, nose.position.y)
-        .sub(mid)
-        .length();
       const ipdPx = leftPx + rightPx;
-      const verticalM = (verticalPx / ipdPx) * IPD_M;
 
       if (!this._calibrated) {
         this._f = (REF_Z * ipdPx) / IPD_M;

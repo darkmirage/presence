@@ -12,7 +12,7 @@ module.exports = {
     env_production: {
       NODE_ENV: "production",
       ENV: "prod",
-      SOCKETCLUSTER_PORT: 8080,
+      SOCKETCLUSTER_PORT: 8081,
       WIREPLACE_SSL_CERT: "/etc/letsencrypt/live/server.wireplace.net/fullchain.pem",
       WIREPLACE_SSL_KEY: "/etc/letsencrypt/live/server.wireplace.net/privkey.pem"
     }

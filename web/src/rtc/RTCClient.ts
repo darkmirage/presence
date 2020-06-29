@@ -1,7 +1,8 @@
 import socketClusterClient, { AGClientSocket } from 'socketcluster-client';
 
-const HOSTNAME = 'mirai';
-const PORT = 8000;
+const PRODUCTION = process.env.NODE_ENV === 'production';
+const HOSTNAME = PRODUCTION ? 'server.wireplace.net' : 'mirai';
+const PORT = PRODUCTION ? 8081 : 8000;
 
 const configuration = {
   iceServers: [
@@ -92,6 +93,7 @@ class RTCClient {
     if (result) {
       this.channel.close();
       this.connection.close();
+
       this.createConnection(channelId);
       this.connection.setRemoteDescription(result.offer);
       const answer = await this.connection.createAnswer();

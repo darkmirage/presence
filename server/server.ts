@@ -114,22 +114,18 @@ const descriptions: Record<string, RTCSessionDescriptionInit> = {};
         try {
           const { channelId, offer } = request.data;
 
-          const existingOffer = descriptions[channelId];
-
           serverLogger.info({
             event: 'signal',
             socket: socket.id,
             channelId,
             offer,
-            existingOffer,
           });
 
-          if (existingOffer) {
-            delete descriptions[channelId];
-            request.end({ offer: existingOffer });
-          } else if (offer) {
+          if (offer) {
             descriptions[channelId] = offer;
             request.end(null);
+          } else {
+            request.end({ offer: descriptions[channelId] });
           }
         } catch (error) {
           serverLogger.error({ error });

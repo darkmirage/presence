@@ -18,8 +18,10 @@ class RTCClient {
   socket: AGClientSocket;
   connection: RTCPeerConnection;
   channel: RTCDataChannel;
+  _handleData: (data: any) => void;
+  _handleDisconnected: () => void;
 
-  constructor() {
+  constructor(onData: (data: any) => void, onDisconnected: () => void) {
     this.socket = socketClusterClient.create({
       hostname: HOSTNAME,
       port: PORT,
@@ -27,14 +29,19 @@ class RTCClient {
     });
     this.connection = new RTCPeerConnection();
     this.channel = this.connection.createDataChannel('dummy');
+    this._handleData = onData;
+    this._handleDisconnected = onDisconnected;
   }
 
   handleConnectionStateChange = () => {
     console.log('[RTCClient]', this.connection.connectionState);
+    if (this.connection.connectionState === 'disconnected') {
+      this._handleDisconnected();
+    }
   };
 
   handleMessage = (event: MessageEvent) => {
-    console.log(event.data);
+    this._handleData(event.data);
   };
 
   handleOpen = () => {

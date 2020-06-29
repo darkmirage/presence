@@ -1,4 +1,3 @@
-import admin from 'firebase-admin';
 import cors from 'cors';
 import eetase from 'eetase';
 import express, { Response } from 'express';
@@ -14,13 +13,6 @@ import socketClusterServer from 'socketcluster-server';
 import uuid from 'uuid';
 
 import logger from './logger';
-
-const serviceAccount = require('../firebase-service-key.json');
-
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-  databaseURL: 'https://wire-place.firebaseio.com',
-});
 
 const serverLogger = logger.child({ module: 'server' });
 
@@ -135,7 +127,7 @@ const descriptions: Record<string, RTCSessionDescriptionInit> = {};
           if (existingOffer) {
             delete descriptions[channelId];
             request.end({ offer: existingOffer });
-          } else {
+          } else if (offer) {
             descriptions[channelId] = offer;
             request.end(null);
           }

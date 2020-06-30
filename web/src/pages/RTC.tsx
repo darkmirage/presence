@@ -25,15 +25,7 @@ const RTC = () => {
   const [pose, setPose] = React.useState<FacePose>(PLACEHOLDER_POSE);
 
   React.useEffect(() => {
-    const c = new RTCClient(
-      (data) => {
-        const decoder = new TextDecoder('ascii');
-        const text = decoder.decode(data);
-        const p: FacePose = JSON.parse(text);
-        setPose(p);
-      },
-      () => setStarted(false)
-    );
+    const c = new RTCClient(setPose, () => setStarted(false));
     setClient(c);
     setLoading(false);
   }, []);
@@ -66,7 +58,7 @@ const RTC = () => {
         </tr>
         <tr>
           <td colSpan={3}>
-            <FacePoseVisualizer pose={pose} />
+            <FacePoseVisualizer client={client!} />
           </td>
         </tr>
       </tbody>

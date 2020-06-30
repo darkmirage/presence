@@ -8,12 +8,14 @@ import {
   Mesh,
   MeshStandardMaterial,
   Object3D,
-  PerspectiveCamera,
   PointLight,
   Scene,
   WebGLRenderer,
 } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
+
+import OffAxisCamera from '../three/OffAxisCamera';
+import RTCClient from '../rtc/RTCClient';
 
 export type FacePose = {
   x: number;
@@ -25,7 +27,7 @@ export type FacePose = {
 };
 
 type Props = {
-  pose: FacePose;
+  client: RTCClient;
 };
 
 const path =
@@ -62,16 +64,14 @@ function loadAvatar(scene: Scene): Object3D {
 }
 
 const FacePoseVisualizer = (props: Props) => {
-  const { pose } = props;
+  const { client } = props;
   const classes = useStyles();
   const ref = React.useRef<HTMLDivElement>(null);
 
   const [renderer] = React.useState<WebGLRenderer>(
     () => new WebGLRenderer({ antialias: true })
   );
-  const [camera] = React.useState<PerspectiveCamera>(
-    () => new PerspectiveCamera()
-  );
+  const [camera] = React.useState<OffAxisCamera>(() => new OffAxisCamera());
   const [scene] = React.useState<Scene>(() => {
     const s = new Scene();
     s.background = new Color(0x131516);
@@ -90,24 +90,24 @@ const FacePoseVisualizer = (props: Props) => {
   React.useEffect(() => {
     if (ref.current && ref.current.children.length === 0) {
       camera.position.set(0, 0.3, 0.5);
+      camera.aspect = ref.current.clientWidth / ref.current.clientHeight;
+      camera.updateProjectionMatrix();
       ref.current.appendChild(renderer.domElement);
       renderer.setSize(ref.current.clientWidth, ref.current.clientHeight);
+      renderer.render(scene, camera);
     }
-  }, [pose, camera, renderer]);
+  }, [camera, renderer]);
 
   React.useEffect(() => {
-    face.position.set(pose.x, pose.y, pose.z);
-    face.rotation.set(pose.rx, pose.ry, pose.rz);
-    const cameraY = face.position.y + 0.25;
-    camera.position.setY(cameraY);
-    camera.lookAt(0, cameraY, 0);
-
-    renderer.render(scene, camera);
-  }, [camera, face, renderer, scene, pose]);
-
-  if (!pose) {
-    return null;
-  }
+    client.onPose((pose) => {
+      face.position.set(-pose.x, pose.y, pose.z);
+      face.rotation.set(pose.rx, -pose.ry, -pose.rz);
+      const cameraY = face.position.y + 0.25;
+      camera.position.setY(cameraY);
+      camera.lookAt(0, cameraY, 0);
+      renderer.render(scene, camera);
+    });
+  }, [client, face, camera, renderer, scene]);
 
   return <div className={classes.FacePoseVisualizer} ref={ref} />;
 };

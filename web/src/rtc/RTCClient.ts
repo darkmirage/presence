@@ -14,14 +14,24 @@ const configuration = {
   ],
 };
 
+export type FacePose = {
+  x: number;
+  y: number;
+  z: number;
+  rx: number;
+  ry: number;
+  rz: number;
+};
+
 class RTCClient {
   socket: AGClientSocket;
   connection: RTCPeerConnection;
   channel: RTCDataChannel;
-  _handleData: (data: any) => void;
+  _decoder: TextDecoder;
+  _handlePose: (data: FacePose) => void;
   _handleDisconnected: () => void;
 
-  constructor(onData: (data: any) => void, onDisconnected: () => void) {
+  constructor(onPose: (data: FacePose) => void, onDisconnected: () => void) {
     this.socket = socketClusterClient.create({
       hostname: HOSTNAME,
       port: PORT,
@@ -29,8 +39,17 @@ class RTCClient {
     });
     this.connection = new RTCPeerConnection();
     this.channel = this.connection.createDataChannel('dummy');
-    this._handleData = onData;
+    this._handlePose = onPose;
     this._handleDisconnected = onDisconnected;
+    this._decoder = new TextDecoder('ascii');
+  }
+
+  onPose(onPose: (pose: FacePose) => void) {
+    const current = this._handlePose;
+    this._handlePose = (pose: FacePose) => {
+      current(pose);
+      onPose(pose);
+    };
   }
 
   handleConnectionStateChange = () => {
@@ -41,7 +60,9 @@ class RTCClient {
   };
 
   handleMessage = (event: MessageEvent) => {
-    this._handleData(event.data);
+    const text = this._decoder.decode(event.data);
+    const p: FacePose = JSON.parse(text);
+    this._handlePose(p);
   };
 
   handleOpen = () => {
@@ -79,7 +100,7 @@ class RTCClient {
     (async () => {
       const channel = this.socket.subscribe('icecandidate:' + channelId);
       for await (let { candidate } of channel) {
-        console.log('[RTCClient]', 'Recieved ICE candidate', candidate);
+        console.log('[RTCClient]', 'Recieved ICE candidate');
         try {
           if (candidate) {
             await this.connection.addIceCandidate(candidate);

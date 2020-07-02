@@ -2,8 +2,9 @@ import React from 'react';
 import { createUseStyles } from 'react-jss';
 import { Button, InputGroup } from '@blueprintjs/core';
 
-import FacePoseVisualizer, { FacePose } from '../components/FacePoseVisualizer';
-import RTCClient from '../rtc/RTCClient';
+import FacePoseVisualizer from '../components/FacePoseVisualizer';
+import FacePoseOffAxis from '../components/FacePoseOffAxis';
+import RTCClient, { FacePose } from '../rtc/RTCClient';
 
 const PLACEHOLDER_POSE: FacePose = {
   x: 0,
@@ -44,25 +45,26 @@ const RTC = () => {
   };
 
   const content = started ? (
-    <table className={classes.RTC}>
-      <tbody>
-        <tr>
-          <td> x: {pose.x}</td>
-          <td> y: {pose.y}</td>
-          <td> z: {pose.z}</td>
-        </tr>
-        <tr>
-          <td>rx: {pose.rx}</td>
-          <td>ry: {pose.ry}</td>
-          <td>rz: {pose.rz}</td>
-        </tr>
-        <tr>
-          <td colSpan={3}>
-            <FacePoseVisualizer client={client!} />
-          </td>
-        </tr>
-      </tbody>
-    </table>
+    <>
+      <table className={classes.RTC}>
+        <tbody>
+          <tr>
+            <td> x: {pose.x}</td>
+            <td> y: {pose.y}</td>
+            <td> z: {pose.z}</td>
+          </tr>
+          <tr>
+            <td>rx: {pose.rx}</td>
+            <td>ry: {pose.ry}</td>
+            <td>rz: {pose.rz}</td>
+          </tr>
+        </tbody>
+      </table>
+      <div className={classes.RTC_container}>
+        <FacePoseVisualizer client={client!} />
+        <FacePoseOffAxis client={client!} />
+      </div>
+    </>
   ) : (
     <div className={classes.RTC}>
       <InputGroup
@@ -86,6 +88,9 @@ const useStyles = createUseStyles({
       width: 100,
       fontFamily: 'monospace',
     },
+  },
+  RTC_container: {
+    display: 'flex',
   },
 });
 
